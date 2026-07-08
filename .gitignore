@@ -241,3 +241,9 @@ vllm/grpc/vllm_engine_pb2.pyi
 
 # Ignore generated cpu headers 
 csrc/cpu/cpu_attn_dispatch_generated.h
+
+# CSCC Competition: test data and model (must NOT be pushed)
+testdata/
+Qwen3.5-27B/
+accuracy_debug/
+*.jsonl
