@@ -81,6 +81,12 @@ class CachedHfTokenizer(TokenizerLike):
         download_dir: str | None = None,
         **kwargs,
     ) -> HfTokenizer:
+        import os as _tok_os
+        # Local path: load with local_files_only to bypass HF Hub validation
+        if isinstance(path_or_repo_id, (str, Path)) and _tok_os.path.isdir(
+            str(path_or_repo_id)
+        ):
+            kwargs.setdefault("local_files_only", True)
         try:
             tokenizer = AutoTokenizer.from_pretrained(
                 path_or_repo_id,
