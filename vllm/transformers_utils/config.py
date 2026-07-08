@@ -177,10 +177,10 @@ class HFConfigParser(ConfigParserBase):
                     model_type = config_dict.get("model_type")
                     if model_type in _CONFIG_REGISTRY:
                         config_class = _CONFIG_REGISTRY[model_type]
-                        config = config_class(str(model_path))
+                        config = config_class.from_dict(config_dict)
                         return config_dict, config
-                    # Fallback: use PretrainedConfig directly
-                    config = PretrainedConfig(**config_dict)
+                    # Fallback: use PretrainedConfig.from_dict
+                    config = PretrainedConfig.from_dict(config_dict)
                     return config_dict, config
         else:
             config_dict, _ = PretrainedConfig.get_config_dict(
