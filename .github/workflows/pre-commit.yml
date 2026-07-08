@@ -1,9 +1,8 @@
 name: pre-commit
 
+# Disabled for competition fork - only manual trigger
 on:
-  pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

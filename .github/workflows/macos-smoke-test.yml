@@ -1,9 +1,7 @@
 name: macOS Apple Silicon Smoke Test
 
+# Disabled for competition fork - only manual trigger
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:  # Manual trigger
 
 permissions:
