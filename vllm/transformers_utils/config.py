@@ -560,6 +560,11 @@ def maybe_override_with_speculators(
     Returns:
         Tuple of (resolved_model, resolved_tokenizer, speculative_config)
     """
+    import os as _os
+    # Local paths (absolute or relative) should not be passed to HuggingFace Hub
+    if model.startswith("/") or model.startswith("./") or _os.path.isdir(model):
+        return model, tokenizer, vllm_speculative_config
+
     if check_gguf_file(model):
         kwargs["gguf_file"] = Path(model).name
         gguf_model_repo = Path(model).parent
