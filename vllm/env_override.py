@@ -482,3 +482,31 @@ if is_torch_equal("2.9.0"):
 
     PythonWrapperCodegen.memory_plan_reuse = memory_plan_reuse_patched
     GraphLowering._update_scheduler = _update_scheduler_patched
+
+
+# ---- DCU automatic optimization (runs at import time) ----
+def _auto_configure_dcu():
+    """Auto-configure environment variables for DCU platform.
+    Runs before any vLLM module imports, so env vars take effect."""
+    # Check if ROCm is present
+    is_rocm = os.path.exists("/opt/rocm") or os.environ.get("ROCM_HOME", "") != ""
+    if not is_rocm:
+        return
+
+    # Enable AITER ops (DCU-optimized kernels)
+    os.environ.setdefault("VLLM_ROCM_USE_AITER", "1")
+    # Enable AITER Flash Attention (unified prefill+decode)
+    os.environ.setdefault("VLLM_ROCM_USE_AITER_MHA", "1")
+    # Enable AITER unified attention path
+    os.environ.setdefault("VLLM_ROCM_USE_AITER_UNIFIED_ATTENTION", "1")
+    # Enable DCU fp8 linear ops
+    os.environ.setdefault("VLLM_ROCM_USE_AITER_LINEAR", "1")
+    # Enable FP8 batch matmul
+    os.environ.setdefault("VLLM_ROCM_USE_AITER_FP8BMM", "1")
+    # Enable kvcache pad alignment for fp8
+    os.environ.setdefault("VLLM_ROCM_FP8_PADDING", "1")
+    # Signal DCU block_size selection
+    os.environ.setdefault("VLLM_DCU_BLOCK_SIZE", "32")
+
+
+_auto_configure_dcu()

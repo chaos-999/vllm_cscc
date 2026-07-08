@@ -953,6 +953,19 @@ class ModelConfig:
                     f"({self.quantization})."
                 )
 
+        # DCU platform: auto-enable FP8 dynamic quantization
+        if self.quantization is None or self.quantization == "fp8":
+            import os as _mdl_os
+            _is_dcu = (
+                _mdl_os.environ.get("ROCM_HOME", "") != ""
+                or _mdl_os.path.exists("/opt/rocm")
+            )
+            if _is_dcu and (self.quantization is None or self.quantization == "fp8"):
+                self.quantization = "fp8"
+                logger.info(
+                    "DCU optimized: auto-enabling FP8 dynamic quantization"
+                )
+
         if self.quantization is not None:
             if self.quantization not in supported_quantization:
                 raise ValueError(
