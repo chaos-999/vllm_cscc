@@ -164,12 +164,32 @@ class HFConfigParser(ConfigParserBase):
         kwargs["local_files_only"] = huggingface_hub.constants.HF_HUB_OFFLINE
         trust_remote_code |= kwargs.get("trust_remote_code", False)
         kwargs = without_trust_remote_code(kwargs)
-        config_dict, _ = PretrainedConfig.get_config_dict(
-            model,
-            revision=revision,
-            code_revision=code_revision,
-            **kwargs,
-        )
+
+        # Local path: load config.json directly to bypass HF Hub validation
+        import os as _hf_os
+        if isinstance(model, (str, Path)) and _hf_os.path.isdir(str(model)):
+            import json as _hf_json
+            model_path = Path(model)
+            if (model_path / "config.json").is_file():
+                with open(model_path / "config.json") as _hf_f:
+                    config_dict = _hf_json.load(_hf_f)
+                    # Still needed to find model_type for the registry
+                    model_type = config_dict.get("model_type")
+                    if model_type in _CONFIG_REGISTRY:
+                        config_class = _CONFIG_REGISTRY[model_type]
+                        config = config_class(str(model_path))
+                        return config_dict, config
+                    # Fallback: use PretrainedConfig directly
+                    config = PretrainedConfig(**config_dict)
+                    return config_dict, config
+        else:
+            config_dict, _ = PretrainedConfig.get_config_dict(
+                model,
+                revision=revision,
+                code_revision=code_revision,
+                **kwargs,
+            )
+
         # Use custom model class if it's in our registry
         model_type = config_dict.get("model_type")
         if model_type is None:
@@ -612,6 +632,22 @@ def get_config(
     hf_overrides_fn: Callable[[PretrainedConfig], PretrainedConfig] | None = None,
     **kwargs,
 ) -> PretrainedConfig:
+    # Local path: skip HF Hub API calls, go straight to config format detection
+    _is_local_path = isinstance(model, (str, Path)) and os.path.isdir(str(model))
+    if _is_local_path:
+        model_path = Path(model)
+        if (model_path / "config.json").is_file():
+            config_format = "hf"
+        elif (model_path / "params.json").is_file():
+            config_format = "mistral"
+        if config_format != "auto":
+            config_parser = get_config_parser(config_format)
+            config_dict, config = config_parser.parse(
+                model, trust_remote_code=trust_remote_code,
+                revision=revision, code_revision=code_revision,
+                hf_overrides=hf_overrides_kw or hf_overrides_fn, **kwargs)
+            return config
+
     # Separate model folder from file path for GGUF models
 
     _is_gguf = is_gguf(model)
