@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 
+import os
 from dataclasses import field
 from typing import ClassVar, Literal
 
@@ -200,7 +201,14 @@ class CacheConfig:
             return self
         object.__setattr__(self, "_block_size_resolved", True)
         if self.block_size is None:
-            object.__setattr__(self, "block_size", self.DEFAULT_BLOCK_SIZE)
+            # DCU platform: use larger block size for better HBM efficiency
+            # DCU has specific HBM alignment, 32 tokens/block reduces
+            # management overhead while maintaining good space utilization
+            if os.environ.get("VLLM_DCU_BLOCK_SIZE", "") == "32":
+                logger.info("DCU block_size=32 (optimized for DCU HBM)")
+                object.__setattr__(self, "block_size", 32)
+            else:
+                object.__setattr__(self, "block_size", self.DEFAULT_BLOCK_SIZE)
         else:
             object.__setattr__(self, "user_specified_block_size", True)
         return self
