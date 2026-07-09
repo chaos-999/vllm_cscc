@@ -953,29 +953,25 @@ class ModelConfig:
                     f"({self.quantization})."
                 )
 
-        # DCU platform: auto-enable FP8 dynamic quantization
-        if self.quantization is None or self.quantization == "fp8":
-            _is_dcu = False
+        # DCU platform: check fp8 matmul support
+        # K100/DCU lacks hardware fp8 matmul (only MI300+ supports it)
+        if self.quantization == "fp8":
             try:
                 import torch as _mdl_t
-                _is_dcu = _mdl_t.cuda.is_available() and (
-                    hasattr(_mdl_t.version, 'hip')
-                    and _mdl_t.version.hip is not None
-                )
+                # Test if fp8 matmul is supported on this GPU
+                _d = _mdl_t.cuda.current_device()
+                _cap = _mdl_t.cuda.get_device_capability(_d)
+                if _mdl_t.cuda.is_available() and hasattr(_mdl_t.version, 'hip'):
+                    # ROCm: only MI300+ supports _scaled_mm
+                    _dname = _mdl_t.cuda.get_device_name(_d)
+                    _is_mi300 = 'MI300' in _dname or 'MI325' in _dname
+                    if not _is_mi300:
+                        logger.warning(
+                            "FP8 quantization disabled: DCU (%s) lacks fp8 matmul",
+                            _dname)
+                        self.quantization = None
             except Exception:
-                pass
-            if not _is_dcu:
-                import os as _mdl_os
-                _is_dcu = (
-                    _mdl_os.path.exists("/opt/dtk")
-                    or _mdl_os.path.exists("/opt/rocm")
-                    or _mdl_os.environ.get("ROCM_HOME", "") != ""
-                )
-            if _is_dcu and (self.quantization is None or self.quantization == "fp8"):
-                self.quantization = "fp8"
-                logger.info(
-                    "DCU optimized: auto-enabling FP8 dynamic quantization"
-                )
+                self.quantization = None
 
         if self.quantization is not None:
             if self.quantization not in supported_quantization:

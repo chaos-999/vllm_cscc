@@ -214,9 +214,6 @@ class CacheConfig:
     @field_validator("cache_dtype", mode="after")
     @classmethod
     def _validate_cache_dtype(cls, cache_dtype: CacheDType) -> CacheDType:
-        if cache_dtype == "auto" and _is_dcu_platform():
-            cache_dtype = "fp8"
-            logger.info("DCU optimized: using fp8 KV cache (auto-selected)")
         if cache_dtype.startswith("fp8"):
             logger.info(
                 "Using fp8 data type to store kv cache. It reduces the GPU "
