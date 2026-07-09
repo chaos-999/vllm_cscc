@@ -49,7 +49,6 @@ class CacheConfig:
     set the GPU memory utilization to 0.5 for each instance."""
     cache_dtype: CacheDType = "auto"
     """Data type for kv cache storage. If "auto", will use model data type.
-    On DCU platform, defaults to fp8 for reduced memory bandwidth.
     CUDA 11.8+ supports fp8 (=fp8_e4m3) and fp8_e5m2. ROCm (AMD GPU) supports
     fp8 (=fp8_e4m3). Intel Gaudi (HPU) supports fp8 (using fp8_inc).
     Some models (namely DeepSeekV3.2) default to fp8, set to bfloat16 to use
@@ -106,27 +105,6 @@ class CacheConfig:
     still be controlled by mamba_cache_dtype). If set to 'auto', the data type
     for the ssm state will be determined by mamba_cache_dtype."""
     mamba_cache_mode: MambaCacheMode = "none"
-
-
-# Helper: detect DCU platform by checking ROCm
-# Imported lazily to avoid circular imports
-_DCU_DETECTED: bool | None = None
-
-
-def _is_dcu_platform() -> bool:
-    global _DCU_DETECTED
-    if _DCU_DETECTED is not None:
-        return _DCU_DETECTED
-    try:
-        import torch
-        _DCU_DETECTED = torch.cuda.is_available() and (
-            os.environ.get("VLLM_DCU_BLOCK_SIZE", "") == "32"
-            or os.environ.get("ROCM_HOME", "") != ""
-            or os.path.exists("/opt/rocm")
-        )
-    except Exception:
-        _DCU_DETECTED = False
-    return _DCU_DETECTED
     """The cache strategy for Mamba layers.
     - "none": set when prefix caching is disabled.
     - "all": cache the mamba state of all tokens at position i * block_size. This is 
@@ -223,7 +201,7 @@ def _is_dcu_platform() -> bool:
             return self
         object.__setattr__(self, "_block_size_resolved", True)
         if self.block_size is None:
-            # DCU platform: use larger block size for better HBM efficiency
+            # DCU: use larger block size for better HBM alignment
             if _is_dcu_platform():
                 object.__setattr__(self, "block_size", 32)
                 logger.info("DCU optimized: block_size=32")
@@ -238,9 +216,7 @@ def _is_dcu_platform() -> bool:
     def _validate_cache_dtype(cls, cache_dtype: CacheDType) -> CacheDType:
         if cache_dtype == "auto" and _is_dcu_platform():
             cache_dtype = "fp8"
-            logger.info(
-                "DCU optimized: using fp8 KV cache (auto-selected)"
-            )
+            logger.info("DCU optimized: using fp8 KV cache (auto-selected)")
         if cache_dtype.startswith("fp8"):
             logger.info(
                 "Using fp8 data type to store kv cache. It reduces the GPU "
@@ -249,3 +225,26 @@ def _is_dcu_platform() -> bool:
                 "scaling factor."
             )
         return cache_dtype
+
+
+# ---- DCU platform detection (module-level helper) ----
+_DCU_DETECTED: bool | None = None
+
+
+def _is_dcu_platform() -> bool:
+    """Auto-detect DCU platform by checking for ROCm."""
+    global _DCU_DETECTED
+    if _DCU_DETECTED is not None:
+        return _DCU_DETECTED
+    try:
+        import torch
+        _DCU_DETECTED = (
+            torch.cuda.is_available()
+            and (
+                os.environ.get("ROCM_HOME", "") != ""
+                or os.path.exists("/opt/rocm")
+            )
+        )
+    except Exception:
+        _DCU_DETECTED = False
+    return _DCU_DETECTED
