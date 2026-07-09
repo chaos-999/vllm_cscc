@@ -232,19 +232,26 @@ _DCU_DETECTED: bool | None = None
 
 
 def _is_dcu_platform() -> bool:
-    """Auto-detect DCU platform by checking for ROCm."""
+    """Auto-detect DCU/ROCm platform using multiple indicators."""
     global _DCU_DETECTED
     if _DCU_DETECTED is not None:
         return _DCU_DETECTED
+    _DCU_DETECTED = False
+    # Check via torch.version.hip (most reliable)
     try:
         import torch
         _DCU_DETECTED = (
             torch.cuda.is_available()
-            and (
-                os.environ.get("ROCM_HOME", "") != ""
-                or os.path.exists("/opt/rocm")
-            )
+            and hasattr(torch.version, 'hip')
+            and torch.version.hip is not None
         )
     except Exception:
-        _DCU_DETECTED = False
+        pass
+    # Fallback: check for DTK/ROCm filesystem paths
+    if not _DCU_DETECTED:
+        _DCU_DETECTED = (
+            os.path.exists("/opt/dtk")
+            or os.path.exists("/opt/rocm")
+            or os.environ.get("ROCM_HOME", "") != ""
+        )
     return _DCU_DETECTED

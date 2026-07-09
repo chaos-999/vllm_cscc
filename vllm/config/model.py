@@ -955,11 +955,22 @@ class ModelConfig:
 
         # DCU platform: auto-enable FP8 dynamic quantization
         if self.quantization is None or self.quantization == "fp8":
-            import os as _mdl_os
-            _is_dcu = (
-                _mdl_os.environ.get("ROCM_HOME", "") != ""
-                or _mdl_os.path.exists("/opt/rocm")
-            )
+            _is_dcu = False
+            try:
+                import torch as _mdl_t
+                _is_dcu = _mdl_t.cuda.is_available() and (
+                    hasattr(_mdl_t.version, 'hip')
+                    and _mdl_t.version.hip is not None
+                )
+            except Exception:
+                pass
+            if not _is_dcu:
+                import os as _mdl_os
+                _is_dcu = (
+                    _mdl_os.path.exists("/opt/dtk")
+                    or _mdl_os.path.exists("/opt/rocm")
+                    or _mdl_os.environ.get("ROCM_HOME", "") != ""
+                )
             if _is_dcu and (self.quantization is None or self.quantization == "fp8"):
                 self.quantization = "fp8"
                 logger.info(

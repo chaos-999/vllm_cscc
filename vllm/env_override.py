@@ -488,8 +488,20 @@ if is_torch_equal("2.9.0"):
 def _auto_configure_dcu():
     """Auto-configure environment variables for DCU platform.
     Runs before any vLLM module imports, so env vars take effect."""
-    # Check if ROCm is present
-    is_rocm = os.path.exists("/opt/rocm") or os.environ.get("ROCM_HOME", "") != ""
+    is_rocm = False
+    try:
+        import importlib.util as _icu
+        spec = _icu.find_spec("torch")
+        if spec is not None:
+            # Check ROCm via file presence (no torch import needed)
+            is_rocm = (
+                os.environ.get("ROCM_HOME", "") != ""
+                or os.path.exists("/opt/rocm")
+                or os.path.exists("/opt/dtk")
+            )
+    except Exception:
+        pass
+
     if not is_rocm:
         return
 
