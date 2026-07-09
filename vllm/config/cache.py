@@ -201,12 +201,7 @@ class CacheConfig:
             return self
         object.__setattr__(self, "_block_size_resolved", True)
         if self.block_size is None:
-            # DCU: use larger block size for better HBM alignment
-            if _is_dcu_platform():
-                object.__setattr__(self, "block_size", 32)
-                logger.info("DCU optimized: block_size=32")
-            else:
-                object.__setattr__(self, "block_size", self.DEFAULT_BLOCK_SIZE)
+            object.__setattr__(self, "block_size", self.DEFAULT_BLOCK_SIZE)
         else:
             object.__setattr__(self, "user_specified_block_size", True)
         return self

@@ -507,18 +507,16 @@ def _auto_configure_dcu():
 
     # Enable AITER ops (DCU-optimized kernels)
     os.environ.setdefault("VLLM_ROCM_USE_AITER", "1")
-    # Enable AITER Flash Attention (unified prefill+decode)
+    # Enable AITER Flash Attention (MHA, NOT unified - unified conflicts block size)
     os.environ.setdefault("VLLM_ROCM_USE_AITER_MHA", "1")
-    # Enable AITER unified attention path
-    os.environ.setdefault("VLLM_ROCM_USE_AITER_UNIFIED_ATTENTION", "1")
-    # Enable DCU fp8 linear ops
+    # NOTE: VLLM_ROCM_USE_AITER_UNIFIED_ATTENTION is NOT set on purpose.
+    # Unified attention overrides block_size to 64 which conflicts with
+    # Qwen3.5's mixed attention+mamba layers. The non-unified AITER FA
+    # path handles this correctly.
+    # Enable DCU fp8 linear ops (safe even without fp8 hardware - no-ops if unsupported)
     os.environ.setdefault("VLLM_ROCM_USE_AITER_LINEAR", "1")
     # Enable FP8 batch matmul
     os.environ.setdefault("VLLM_ROCM_USE_AITER_FP8BMM", "1")
-    # Enable kvcache pad alignment for fp8
-    os.environ.setdefault("VLLM_ROCM_FP8_PADDING", "1")
-    # Signal DCU block_size selection
-    os.environ.setdefault("VLLM_DCU_BLOCK_SIZE", "32")
 
 
 _auto_configure_dcu()
