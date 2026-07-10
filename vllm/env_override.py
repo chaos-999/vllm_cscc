@@ -498,6 +498,3 @@ for _dcu_key, _dcu_val in {
     "VLLM_ROCM_USE_AITER_LINEAR": "1",
 }.items():
     os.environ.setdefault(_dcu_key, _dcu_val)
-
-
-_auto_configure_dcu()
