@@ -203,15 +203,15 @@ class Int8DynamicLinearMethod(QuantizeMethodBase):
         # AITER gemm_a8w8_CK expects: A=[M,K], B=[N,K], As=[M,1], Bs=[N,1]
         Bs = w_scale.unsqueeze(1)  # [N, 1]
 
-        # Call AITER's gemm_a8w8
+        # Call AITER's gemm_a8w8 via registered torch op
         try:
-            from vllm._custom_ops import vllm_ops
-            if hasattr(vllm_ops, 'rocm_aiter_gemm_a8w8'):
-                out = vllm_ops.rocm_aiter_gemm_a8w8(
+            op = getattr(torch.ops.vllm, "rocm_aiter_gemm_a8w8", None)
+            if op is not None:
+                out = op(
                     x_int8, w_int8, x_scale, Bs, bias, torch.bfloat16
                 )
             else:
-                # Direct call to aiter
+                # Fallback to direct aiter import
                 from aiter import gemm_a8w8_CK
                 out = gemm_a8w8_CK(
                     x_int8, w_int8, x_scale, Bs, bias, torch.float16
