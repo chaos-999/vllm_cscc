@@ -12,6 +12,7 @@ logger = init_logger(__name__)
 QuantizationMethods = Literal[
     "awq",
     "fp8",
+    "int8_dynamic",
     "ptpc_fp8",
     "fbgemm_fp8",
     "fp_quant",
@@ -121,6 +122,7 @@ def get_quantization_config(quantization: str) -> type[QuantizationConfig]:
     from .gptq import GPTQConfig
     from .gptq_marlin import GPTQMarlinConfig
     from .inc import INCConfig
+    from .int8_dynamic import Int8DynamicConfig
     from .modelopt import (
         ModelOptFp8Config,
         ModelOptMixedPrecisionConfig,
@@ -136,6 +138,7 @@ def get_quantization_config(quantization: str) -> type[QuantizationConfig]:
     method_to_config: dict[str, type[QuantizationConfig]] = {
         "awq": AWQConfig,
         "fp8": Fp8Config,
+        "int8_dynamic": Int8DynamicConfig,
         "fbgemm_fp8": FBGEMMFp8Config,
         "fp_quant": FPQuantConfig,
         "modelopt": ModelOptFp8Config,
