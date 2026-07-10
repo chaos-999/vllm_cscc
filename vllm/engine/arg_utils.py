@@ -2097,17 +2097,20 @@ class EngineArgs:
 
         if self.enable_prefix_caching is None:
             # DCU: disable prefix caching for single-request scenarios
-            # It adds overhead without benefit.
             import os as _ac_os
+            import glob as _ac_glob
             _is_dcu = (
                 _ac_os.environ.get("ROCM_HOME", "") != ""
+                or _ac_os.environ.get("HIP_PLATFORM", "") != ""
                 or _ac_os.path.exists("/opt/rocm")
                 or _ac_os.path.exists("/opt/dtk")
+                or bool(_ac_glob.glob("/opt/dtk-*"))
+                or bool(_ac_glob.glob("/opt/rocm-*"))
             )
             if _is_dcu:
                 self.enable_prefix_caching = False
                 logger.info(
-                    "DCU optimized: prefix caching disabled (single request)"
+                    "DCU: prefix caching disabled (single request)"
                 )
             else:
                 self.enable_prefix_caching = default_prefix_caching
