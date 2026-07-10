@@ -66,7 +66,7 @@ class CacheConfig:
     `ModelConfig` and that value should be manually duplicated here."""
     enable_prefix_caching: bool = False
     """Whether to enable prefix caching.
-    Disabled by default for single-request scenarios."""
+    Disabled by default (single request doesn't benefit)."""
     prefix_caching_hash_algo: PrefixCachingHashAlgo = "sha256"
     """Set the hash algorithm for prefix caching:\n
     - "sha256" uses Pickle for object serialization before hashing. This is the
