@@ -120,18 +120,10 @@ class Int8DynamicLinearMethod(QuantizeMethodBase):
         )
         layer.register_parameter("weight", weight)
 
-        # Weight scale: per-channel (one scale per output channel)
-        weight_scale = PerTensorScaleParameter(
-            data=torch.empty(
-                output_size_per_partition, 1, dtype=torch.float32
-            ),
-            weight_loader=weight_loader,
-        )
-        layer.register_parameter("weight_scale", weight_scale)
-
-        # Quantized weight storage (INT8, not a model parameter)
-        # Will be populated in process_weights_after_loading
+        # Weight scale (not a parameter - managed manually)
+        # Stored as plain tensor, not a Parameter, to avoid shape constraints
         layer.weight_int8 = None
+        layer.wscale = None
 
     def process_weights_after_loading(self, layer: torch.nn.Module) -> None:
         """Quantize bf16 weights to INT8 (in-memory, not persisted to disk)."""
@@ -153,14 +145,11 @@ class Int8DynamicLinearMethod(QuantizeMethodBase):
 
         # Store quantized weights (in-memory only)
         layer.weight_int8 = w_int8
-        layer.weight_scale.data.copy_(scale.squeeze(-1))
+        layer.wscale = scale  # [out_dim, 1]
 
-        # Keep original bf16 weight for fallback
-        # (but free the INT8 version when not on DCU)
         logger.info(
             "INT8 dynamic: quantized weights (in-memory), "
-            "shape=%s, scale_shape=%s",
-            w_int8.shape, scale.shape
+            "shape=%s", w_int8.shape
         )
 
     def apply(
@@ -197,7 +186,7 @@ class Int8DynamicLinearMethod(QuantizeMethodBase):
 
         # Get INT8 weights and scales
         w_int8 = layer.weight_int8  # [N, K]
-        w_scale = layer.weight_scale  # [N]
+        w_scale = layer.wscale  # [N, 1]
 
         # Transpose weight to [K, N] for gemm_a8w8 (which expects B as [N, K])
         # AITER gemm_a8w8_CK expects: A=[M,K], B=[N,K], As=[M,1], Bs=[N,1]
