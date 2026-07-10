@@ -484,17 +484,19 @@ if is_torch_equal("2.9.0"):
     GraphLowering._update_scheduler = _update_scheduler_patched
 
 
-# ---- DCU optimization (unconditional) ----
-# These env vars are safe to set unconditionally because AITER's
-# rocm_aiter_ops.is_aiter_found() checks library availability before
-# enabling any DCU-specific operations. On non-ROCm platforms they
-# are simply ignored.
-for _dcu_key, _dcu_val in {
-    # Enable AITER ops (DCU-optimized kernels)
+# ---- DCU optimization (force set) ----
+# These env vars are force-set to ensure they are enabled regardless of
+# any prior environment settings. AITER's rocm_aiter_ops.is_aiter_found()
+# safely handles the case where the AITER library is not available.
+_DCU_ENV_VARS = {
     "VLLM_ROCM_USE_AITER": "1",
-    # Enable AITER Flash Attention (MHA, not unified)
     "VLLM_ROCM_USE_AITER_MHA": "1",
-    # Enable AITER linear ops
     "VLLM_ROCM_USE_AITER_LINEAR": "1",
-}.items():
-    os.environ.setdefault(_dcu_key, _dcu_val)
+    # Enable fast decoding via cudagraph on ROCm
+    "VLLM_ROCM_USE_SKINNY_GEMM": "1",
+    # Enable custom paged attention
+    "VLLM_ROCM_CUSTOM_PAGED_ATTN": "1",
+}
+for _dcu_key, _dcu_val in _DCU_ENV_VARS.items():
+    if os.environ.get(_dcu_key) != _dcu_val:
+        os.environ[_dcu_key] = _dcu_val
