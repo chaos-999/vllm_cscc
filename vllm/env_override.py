@@ -484,39 +484,20 @@ if is_torch_equal("2.9.0"):
     GraphLowering._update_scheduler = _update_scheduler_patched
 
 
-# ---- DCU automatic optimization (runs at import time) ----
-def _auto_configure_dcu():
-    """Auto-configure environment variables for DCU platform.
-    Runs before any vLLM module imports, so env vars take effect."""
-    is_rocm = False
-    try:
-        import importlib.util as _icu
-        spec = _icu.find_spec("torch")
-        if spec is not None:
-            # Check ROCm via file presence (no torch import needed)
-            is_rocm = (
-                os.environ.get("ROCM_HOME", "") != ""
-                or os.path.exists("/opt/rocm")
-                or os.path.exists("/opt/dtk")
-            )
-    except Exception:
-        pass
-
-    if not is_rocm:
-        return
-
+# ---- DCU optimization (unconditional) ----
+# These env vars are safe to set unconditionally because AITER's
+# rocm_aiter_ops.is_aiter_found() checks library availability before
+# enabling any DCU-specific operations. On non-ROCm platforms they
+# are simply ignored.
+for _dcu_key, _dcu_val in {
     # Enable AITER ops (DCU-optimized kernels)
-    os.environ.setdefault("VLLM_ROCM_USE_AITER", "1")
-    # Enable AITER Flash Attention (MHA, NOT unified - unified conflicts block size)
-    os.environ.setdefault("VLLM_ROCM_USE_AITER_MHA", "1")
-    # NOTE: VLLM_ROCM_USE_AITER_UNIFIED_ATTENTION is NOT set on purpose.
-    # Unified attention overrides block_size to 64 which conflicts with
-    # Qwen3.5's mixed attention+mamba layers. The non-unified AITER FA
-    # path handles this correctly.
-    # Enable DCU fp8 linear ops (safe even without fp8 hardware - no-ops if unsupported)
-    os.environ.setdefault("VLLM_ROCM_USE_AITER_LINEAR", "1")
-    # Enable FP8 batch matmul
-    os.environ.setdefault("VLLM_ROCM_USE_AITER_FP8BMM", "1")
+    "VLLM_ROCM_USE_AITER": "1",
+    # Enable AITER Flash Attention (MHA, not unified)
+    "VLLM_ROCM_USE_AITER_MHA": "1",
+    # Enable AITER linear ops
+    "VLLM_ROCM_USE_AITER_LINEAR": "1",
+}.items():
+    os.environ.setdefault(_dcu_key, _dcu_val)
 
 
 _auto_configure_dcu()
