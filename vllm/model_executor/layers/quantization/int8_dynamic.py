@@ -20,7 +20,6 @@ import torch.nn.functional as F
 from vllm.logger import init_logger
 from vllm.model_executor.layers.linear import (
     LinearBase,
-    UnquantizedLinearMethod,
 )
 from vllm.model_executor.layers.quantization.base_config import (
     QuantizationConfig,
@@ -28,7 +27,6 @@ from vllm.model_executor.layers.quantization.base_config import (
 )
 from vllm.model_executor.parameter import (
     ModelWeightParameter,
-    PerTensorScaleParameter,
 )
 from vllm.model_executor.utils import set_weight_attrs
 
@@ -147,9 +145,14 @@ class Int8DynamicLinearMethod(QuantizeMethodBase):
         layer.weight_int8 = w_int8
         layer.wscale = scale  # [out_dim, 1]
 
+        # Free original bf16 weights to save GPU memory
+        # INT8 weights are half the size: ~27GB instead of ~54GB
+        del layer.weight
+        layer.weight = None
+
         logger.info(
-            "INT8 dynamic: quantized weights (in-memory), "
-            "shape=%s", w_int8.shape
+            "INT8 dynamic: quantized weights to INT8, "
+            "freed original bf16, shape=%s", w_int8.shape
         )
 
     def apply(
@@ -221,5 +224,14 @@ class Int8DynamicLinearMethod(QuantizeMethodBase):
         bias: torch.Tensor | None,
         orig_shape: torch.Size,
     ) -> torch.Tensor:
-        """Fallback: use bf16 matmul."""
-        return F.linear(x, layer.weight, bias)
+        """Fallback: dequantize INT8 weights to bf16 and run matmul."""
+        if layer.weight_int8 is not None and layer.wscale is not None:
+            # Dequantize INT8 → bf16 on-the-fly
+            w_int8 = layer.weight_int8.to(torch.float32)
+            w_bf16 = (w_int8 * layer.wscale).to(x.dtype)
+            return F.linear(x, w_bf16, bias)
+        # Last resort: use whatever weight is available
+        w = getattr(layer, "weight", None)
+        if w is not None:
+            return F.linear(x, w, bias)
+        raise RuntimeError("No weights available for layer")
