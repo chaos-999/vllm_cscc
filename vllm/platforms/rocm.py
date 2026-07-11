@@ -146,7 +146,9 @@ _GCN_ARCH = _get_gcn_arch()
 
 _ON_GFX1X = any(arch in _GCN_ARCH for arch in ["gfx11", "gfx12"])
 _ON_MI3XX = any(arch in _GCN_ARCH for arch in ["gfx942", "gfx950"])
-_ON_GFX9 = any(arch in _GCN_ARCH for arch in ["gfx90a", "gfx942", "gfx950"])
+_ON_GFX9 = any(arch in _GCN_ARCH for arch in [
+    "gfx90a", "gfx942", "gfx950",
+]) or _GCN_ARCH.startswith("gfx93")
 _ON_GFX942 = "gfx942" in _GCN_ARCH
 _ON_GFX950 = "gfx950" in _GCN_ARCH
 
