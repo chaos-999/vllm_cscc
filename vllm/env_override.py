@@ -496,6 +496,8 @@ _DCU_ENV_VARS = {
     "VLLM_ROCM_USE_SKINNY_GEMM": "1",
     # Enable custom paged attention
     "VLLM_ROCM_CUSTOM_PAGED_ATTN": "1",
+    # Enable Triton rotary embedding (better for long context)
+    "VLLM_ROCM_USE_AITER_TRITON_ROPE": "1",
 }
 for _dcu_key, _dcu_val in _DCU_ENV_VARS.items():
     if os.environ.get(_dcu_key) != _dcu_val:
