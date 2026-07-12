@@ -490,10 +490,10 @@ if is_torch_equal("2.9.0"):
 # safely handles the case where the AITER library is not available.
 _DCU_ENV_VARS = {
     "VLLM_ROCM_USE_AITER": "1",
-    # NOTE: VLLM_ROCM_USE_AITER_MHA disabled because the installed AITER
-    # version lacks flash_attn_varlen_func. Falls back to TRITON_ATTN.
-    # Other AITER ops (linear, rmsnorm) are kept.
-    "VLLM_ROCM_USE_AITER_LINEAR": "1",
+    # NOTE: VLLM_ROCM_USE_AITER_MHA disabled - installed AITER version
+    # lacks flash_attn_varlen_func. Falls back to TRITON_ATTN.
+    # NOTE: VLLM_ROCM_USE_AITER_LINEAR disabled - triggers _rocm_C.wvSplitK
+    # which is missing from the installed DTK.
     # Enable fast decoding via cudagraph on ROCm
     "VLLM_ROCM_USE_SKINNY_GEMM": "1",
     # Enable custom paged attention
