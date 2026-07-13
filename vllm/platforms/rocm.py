@@ -628,6 +628,17 @@ class RocmPlatform(Platform):
         use_aiter_rms_norm = rocm_aiter_ops.is_rmsnorm_enabled()
         use_aiter_fp8_linear = rocm_aiter_ops.is_linear_fp8_enabled()
         use_aiter_fused_se = rocm_aiter_ops.is_fusion_moe_shared_experts_enabled()
+
+        # DCU K100 (gfx936): skip custom ops - they trigger slow torch.compile
+        # during weight loading and the compiled ops are not used by the model.
+        if "gfx936" in _GCN_ARCH:
+            _DCU_SKIP_CUSTOM_OPS = True
+        else:
+            _DCU_SKIP_CUSTOM_OPS = False
+
+        if _DCU_SKIP_CUSTOM_OPS:
+            return  # Skip all custom ops on K100
+
         #  Aiter rms norm perform best when CUDA Graph capture is enabled.
         if (
             use_aiter_rms_norm
