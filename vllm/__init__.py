@@ -6,35 +6,12 @@
 # version library first.  Such assumption is critical for some customization.
 from .version import __version__, __version_tuple__  # isort:skip
 
-import os
 import typing
 
 # The environment variables override should be imported before any other
 # modules to ensure that the environment variables are set before any
 # other modules are imported.
 import vllm.env_override  # noqa: F401
-
-# DCU diagnostics
-if os.environ.get("VLLM_DCU_DIAG") == "1":
-    try:
-        from vllm._aiter_ops import rocm_aiter_ops, is_aiter_found as _aiter_found
-        print(f"[DCU-DIAG] AITER library found: {_aiter_found()}")
-        print(f"[DCU-DIAG] AITER enabled: {rocm_aiter_ops.is_enabled()}")
-        print(f"[DCU-DIAG] AITER linear: {rocm_aiter_ops.is_linear_enabled()}")
-        print(f"[DCU-DIAG] AITER MHA: {rocm_aiter_ops.is_mha_enabled()}")
-    except Exception as e:
-        print(f"[DCU-DIAG] AITER diagnostic failed: {e}")
-    try:
-        import torch
-        print(f"[DCU-DIAG] torch.cuda.is_available: {torch.cuda.is_available()}")
-        if torch.cuda.is_available():
-            name = torch.cuda.get_device_name(0)
-            cap = torch.cuda.get_device_capability(0)
-            hip_ver = getattr(torch.version, 'hip', None)
-            print(f"[DCU-DIAG] GPU: {name}, cap: {cap}, hip: {hip_ver}")
-            print(f"[DCU-DIAG] Memory: {torch.cuda.get_device_properties(0).total_mem / 1e9:.1f} GB")
-    except Exception as e:
-        print(f"[DCU-DIAG] torch diagnostic failed: {e}")
 
 MODULE_ATTRS = {
     "AsyncEngineArgs": ".engine.arg_utils:AsyncEngineArgs",
