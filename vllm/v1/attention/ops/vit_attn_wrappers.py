@@ -33,10 +33,7 @@ def flash_attn_maxseqlen_wrapper(
 ) -> torch.Tensor:
     kwargs = {}
     if is_rocm_aiter:
-        try:
-            from aiter import flash_attn_varlen_func
-        except ImportError:
-            from vllm.v1.attention.backends.fa_utils import flash_attn_varlen_func
+        from aiter import flash_attn_varlen_func
     else:
         from vllm.v1.attention.backends.fa_utils import flash_attn_varlen_func
 

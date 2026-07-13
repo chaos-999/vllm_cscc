@@ -490,17 +490,12 @@ if is_torch_equal("2.9.0"):
 # safely handles the case where the AITER library is not available.
 _DCU_ENV_VARS = {
     "VLLM_ROCM_USE_AITER": "1",
-    # NOTE: VLLM_ROCM_USE_AITER_MHA disabled - installed AITER version
-    # lacks flash_attn_varlen_func. Falls back to TRITON_ATTN.
+    "VLLM_ROCM_USE_AITER_MHA": "1",
     "VLLM_ROCM_USE_AITER_LINEAR": "1",
     # Enable fast decoding via cudagraph on ROCm
     "VLLM_ROCM_USE_SKINNY_GEMM": "1",
     # Enable custom paged attention
     "VLLM_ROCM_CUSTOM_PAGED_ATTN": "1",
-    # Enable Triton rotary embedding (better for long context)
-    "VLLM_ROCM_USE_AITER_TRITON_ROPE": "1",
-    # Dump DCU diagnostics at startup
-    "VLLM_DCU_DIAG": "1",
 }
 for _dcu_key, _dcu_val in _DCU_ENV_VARS.items():
     if os.environ.get(_dcu_key) != _dcu_val:
